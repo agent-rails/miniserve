@@ -36,8 +36,8 @@ from miniserve.runner import PagedRunner
 
 DTYPES = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}
 AMPLE_POOL_BLOCKS = 512
-MAX_ATTEMPTS = 3
-RETRY_SLEEP_S = 30.0
+MAX_ATTEMPTS = 6
+RETRY_SLEEP_S = 60.0
 BASELINE_CANARIES = 5
 SWEEP_POOLS = [32, 48, 96, 192]
 
