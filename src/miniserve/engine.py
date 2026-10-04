@@ -56,6 +56,7 @@ class StepRecord:
     prefill_tokens: int
     decode_tokens: int
     running: int
+    held_rows: int
     waiting: int
     free_blocks: int
     reserved_blocks: int
@@ -66,6 +67,7 @@ class _State(Enum):
     WAITING = "waiting"
     PREFILL = "prefill"
     DECODE = "decode"
+    HELD = "held"
 
 
 @dataclass
@@ -79,7 +81,7 @@ class _Sequence:
     def cached_tokens(self) -> int:
         if self.state is _State.PREFILL:
             return self.prefill_pos
-        if self.state is _State.DECODE:
+        if self.state in (_State.DECODE, _State.HELD):
             return len(self.request.prompt_token_ids) + len(self.generated) - 1
         return 0
 
@@ -95,9 +97,14 @@ class Engine:
         max_running: int,
         clock: Callable[[], float] = time.monotonic,
         check_invariants: bool = False,
+        policy: Literal["continuous", "static"] = "continuous",
+        reservation: Literal["exact", "max_len"] = "exact",
+        static_wait_s: float = 0.0,
     ):
         if min(max_model_len, queue_capacity, prefill_chunk, max_running) < 1:
             raise ValueError("engine limits must be >= 1")
+        if static_wait_s < 0:
+            raise ValueError("static_wait_s must be >= 0")
         self.runner = runner
         self.eos = frozenset(eos_token_ids)
         self.max_model_len = max_model_len
@@ -106,6 +113,9 @@ class Engine:
         self.max_running = max_running
         self.clock = clock
         self.check_invariants = check_invariants
+        self.policy = policy
+        self.reservation = reservation
+        self.static_wait_s = static_wait_s
         self.records: dict[str, RequestRecord] = {}
         self.step_log: list[StepRecord] = []
         self._waiting: deque[_Sequence] = deque()
@@ -131,7 +141,12 @@ class Engine:
         return len(self._running)
 
     def blocks_needed(self, request: Request) -> int:
-        return -(-(len(request.prompt_token_ids) + request.max_new_tokens) // self.block_size)
+        tokens = (
+            self.max_model_len
+            if self.reservation == "max_len"
+            else len(request.prompt_token_ids) + request.max_new_tokens
+        )
+        return -(-tokens // self.block_size)
 
     def submit(self, request: Request) -> None:
         if request.id in self.records:
@@ -159,7 +174,7 @@ class Engine:
         started = time.perf_counter()
         self._expire_and_cancel()
         self._admit()
-        decoding = [s for s in self._running if s.state is _State.DECODE]
+        decoding = [s for s in self._running if s.state in (_State.DECODE, _State.HELD)]
         try:
             prefill_tokens = self._run_prefill()
             decode_tokens = self._run_decode(decoding)
@@ -167,6 +182,7 @@ class Engine:
             self._fail_running(f"{type(err).__name__}: {err}")
             self._step += 1
             raise
+        self._release_held_batch()
         self._log_step(started, prefill_tokens, decode_tokens)
         self._step += 1
         if self.check_invariants:
@@ -189,6 +205,8 @@ class Engine:
     def _expire_and_cancel(self) -> None:
         now = self.clock()
         for seq in [*self._waiting, *self._running]:
+            if seq.state is _State.HELD:
+                continue
             request = seq.request
             if request.id in self._cancelled:
                 self._finish(seq, "cancelled")
@@ -197,6 +215,8 @@ class Engine:
 
     def _admit(self) -> None:
         allocator = self.runner.allocator
+        if self.policy == "static" and not self._static_batch_ready():
+            return
         while self._waiting and len(self._running) < self.max_running:
             head = self._waiting[0]
             need = self.blocks_needed(head.request)
@@ -207,6 +227,21 @@ class Engine:
             head.state = _State.PREFILL
             self._running.append(head)
             self.records[head.request.id].admitted = self.clock()
+
+    def _static_batch_ready(self) -> bool:
+        if self._running or not self._waiting:
+            return False
+        if len(self._waiting) >= self.max_running:
+            return True
+        oldest = self.records[self._waiting[0].request.id].arrival
+        return self.clock() - oldest >= self.static_wait_s
+
+    def _release_held_batch(self) -> None:
+        if not self._running or any(s.state is not _State.HELD for s in self._running):
+            return
+        for seq in self._running:
+            self.runner.allocator.free(seq.request.id)
+        self._running.clear()
 
     def _run_prefill(self) -> int:
         seq = next((s for s in self._running if s.state is _State.PREFILL), None)
@@ -229,9 +264,13 @@ class Engine:
         pasts = [s.cached_tokens for s in batch]
         logits = self.runner.decode(ids, tokens, pasts)
         chosen = [int(t) for t in torch.argmax(logits, dim=-1).to("cpu")]
+        useful = 0
         for seq, token in zip(batch, chosen, strict=True):
+            if seq.state is _State.HELD:
+                continue
             self._accept_token(seq, token)
-        return len(batch)
+            useful += 1
+        return useful
 
     def _accept_token(self, seq: _Sequence, token: int) -> None:
         record = self.records[seq.request.id]
@@ -245,6 +284,11 @@ class Engine:
 
     def _finish(self, seq: _Sequence, reason: TerminalReason, detail: str = "") -> None:
         request_id = seq.request.id
+        if reason == "finished" and self.policy == "static" and seq in self._running:
+            seq.state = _State.HELD
+            self._cancelled.discard(request_id)
+            self._terminate_record(request_id, reason, detail)
+            return
         if seq in self._running:
             self._running.remove(seq)
             self.runner.allocator.free(request_id)
@@ -261,7 +305,11 @@ class Engine:
 
     def _fail_running(self, detail: str) -> None:
         for seq in list(self._running):
-            self._finish(seq, "error", detail)
+            if seq.state is _State.HELD:
+                self._running.remove(seq)
+                self.runner.allocator.free(seq.request.id)
+            else:
+                self._finish(seq, "error", detail)
 
     def _log_step(self, started: float, prefill_tokens: int, decode_tokens: int) -> None:
         allocator = self.runner.allocator
@@ -273,6 +321,7 @@ class Engine:
                 prefill_tokens=prefill_tokens,
                 decode_tokens=decode_tokens,
                 running=len(self._running),
+                held_rows=sum(1 for s in self._running if s.state is _State.HELD),
                 waiting=len(self._waiting),
                 free_blocks=allocator.free_count,
                 reserved_blocks=allocator.used_count,
