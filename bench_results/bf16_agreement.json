@@ -1,0 +1,115 @@
+{
+  "requests": 16,
+  "identical": 7,
+  "diverged": 9,
+  "first_divergence_positions": [
+    12,
+    15,
+    17,
+    24,
+    29,
+    32,
+    33,
+    39,
+    45
+  ],
+  "new_tokens_cap": 48,
+  "rows": [
+    {
+      "id": "req-0000",
+      "reference_tokens": 48,
+      "candidate_tokens": 48,
+      "first_divergence": 24
+    },
+    {
+      "id": "req-0001",
+      "reference_tokens": 48,
+      "candidate_tokens": 48,
+      "first_divergence": null
+    },
+    {
+      "id": "req-0002",
+      "reference_tokens": 23,
+      "candidate_tokens": 23,
+      "first_divergence": null
+    },
+    {
+      "id": "req-0003",
+      "reference_tokens": 48,
+      "candidate_tokens": 48,
+      "first_divergence": null
+    },
+    {
+      "id": "req-0004",
+      "reference_tokens": 48,
+      "candidate_tokens": 48,
+      "first_divergence": 29
+    },
+    {
+      "id": "req-0005",
+      "reference_tokens": 48,
+      "candidate_tokens": 48,
+      "first_divergence": null
+    },
+    {
+      "id": "req-0006",
+      "reference_tokens": 40,
+      "candidate_tokens": 40,
+      "first_divergence": null
+    },
+    {
+      "id": "req-0007",
+      "reference_tokens": 48,
+      "candidate_tokens": 48,
+      "first_divergence": null
+    },
+    {
+      "id": "req-0008",
+      "reference_tokens": 48,
+      "candidate_tokens": 48,
+      "first_divergence": 39
+    },
+    {
+      "id": "req-0009",
+      "reference_tokens": 48,
+      "candidate_tokens": 48,
+      "first_divergence": 17
+    },
+    {
+      "id": "req-0010",
+      "reference_tokens": 48,
+      "candidate_tokens": 48,
+      "first_divergence": 12
+    },
+    {
+      "id": "req-0011",
+      "reference_tokens": 48,
+      "candidate_tokens": 48,
+      "first_divergence": 45
+    },
+    {
+      "id": "req-0012",
+      "reference_tokens": 42,
+      "candidate_tokens": 48,
+      "first_divergence": 32
+    },
+    {
+      "id": "req-0013",
+      "reference_tokens": 48,
+      "candidate_tokens": 48,
+      "first_divergence": 33
+    },
+    {
+      "id": "req-0014",
+      "reference_tokens": 38,
+      "candidate_tokens": 38,
+      "first_divergence": null
+    },
+    {
+      "id": "req-0015",
+      "reference_tokens": 48,
+      "candidate_tokens": 48,
+      "first_divergence": 15
+    }
+  ]
+}

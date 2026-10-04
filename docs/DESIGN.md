@@ -1,6 +1,6 @@
 # miniserve design
 
-Status: revision 3. Phases 1 to 3 implemented and tested; Phase 4 benchmark in progress. Measured results go in `MICROBENCH.md` and `BENCHMARKS.md`. Where this document and a measurement disagree, the measurement wins.
+Status: revision 4. Phases 1 to 4 implemented and tested. The benchmark has one complete repetition, not the three planned; see `BENCHMARKS.md`. Phase 5 (HTTP endpoint) is not built. Measured results go in `MICROBENCH.md` and `BENCHMARKS.md`. Where this document and a measurement disagree, the measurement wins.
 
 ## Problem and mechanism
 

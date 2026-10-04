@@ -4,7 +4,7 @@ A small LLM server, built from scratch, to show how two key ideas in modern LLM 
 
 It runs a real model (Qwen3-0.6B) on a Mac or a CPU. It is small enough to read in an afternoon.
 
-Results are in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md). Design decisions are in [`docs/DESIGN.md`](docs/DESIGN.md).
+Full results: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md). Design decisions: [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## The problem in two minutes
 
@@ -30,6 +30,18 @@ user B  [##...................]      [A][A][B][A][C][B][ ][ ][C][ ]
 user C  [#######...............]      each user keeps a short list of its blocks
         '.' = reserved, unused       A: 0,1,3   B: 2,5   C: 4,8
 ```
+
+## Results at a glance
+
+Measured on one Apple M1 Max, one complete run, 48 requests per cell. Read the limits in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) before quoting any number.
+
+| Question | Answer |
+| --- | --- |
+| How much more work per second with continuous batching? | 5.8 times sequential, 1.45 times static batching (at 8 times the sequential load). |
+| How long does a user wait for the first token? | Median 60 ms with continuous batching, 1.7 s with static batching, 28 s one at a time (at 2 times load). |
+| What does batching cost? | Each user's tokens arrive slower: median gap 21 ms alone, 43 ms at the highest load. |
+| When does exact-length block reservation help? | Only when memory is tight. With a small pool it gave 1.2 to 2.2 times the throughput of reserving the maximum for everyone. With a big pool it made no difference. |
+| What does paging cost? | About 2.3 to 2.8% slower at one user at a time. |
 
 ## What is in this repo
 

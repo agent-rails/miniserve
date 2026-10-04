@@ -13,6 +13,9 @@ def load(path: Path) -> list[dict[str, Any]]:
 
 
 def dig(summary: dict[str, Any], key: str) -> float | None:
+    if key == "utilization":
+        reserved = summary["mean_reserved_blocks"]
+        return None if not reserved else summary["mean_used_blocks"] / reserved
     head, _, tail = key.partition(".")
     value = summary[head]
     if tail:
@@ -73,11 +76,17 @@ def report(rows: list[dict[str, Any]]) -> str:
             continue
         by_kind[r["kind"]].append(r)
     env = by_kind["environment"][0]
+    per_rep: dict[int, int] = defaultdict(int)
+    for r in by_kind["matrix"] + by_kind["sweep"]:
+        per_rep[r["rep"]] += 1
+    per_rep_text = ", ".join(f"rep {k}: {v}" for k, v in sorted(per_rep.items()))
     out = [
         "## Run identity\n",
         f"- Code: `{env['git_sha'][:7]}`, chip {env['chip']}, torch {env['torch']}, "
         f"device {env['device']}, dtype {env['dtype']}",
-        f"- {env['requests_per_run']} requests per cell, {env['reps']} repetitions, base seed {env['base_seed']}",
+        f"- {env['requests_per_run']} requests per cell, base seed {env['base_seed']}, "
+        f"{env['reps']} repetitions planned",
+        f"- Valid cells per repetition: {per_rep_text}",
         f"- Block size {env['block_size']}, max_model_len {env['max_model_len']}, "
         f"max_new_tokens {env['max_new_tokens']}, static wait {env['static_wait_s']} s",
     ]
@@ -127,6 +136,7 @@ def report(rows: list[dict[str, Any]]) -> str:
         out.append(sweep_section(sweep, "mean_running", "Mean sequences running per step", 2))
         out.append(sweep_section(sweep, "mean_reserved_blocks", "Mean blocks reserved", 1))
         out.append(sweep_section(sweep, "mean_used_blocks", "Mean blocks holding tokens", 1))
+        out.append(sweep_section(sweep, "utilization", "Block utilization (holding tokens / reserved)", 2))
     return "\n".join(out)
 
 
