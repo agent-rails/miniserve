@@ -2,8 +2,10 @@ import argparse
 import gc
 import json
 import platform
+import statistics
 import subprocess
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +13,7 @@ import torch
 from tokenizers import Tokenizer
 
 from miniserve.allocator import BlockAllocator
+from miniserve.bench.canary import CANARY_TOLERANCE, measure_canary_ms, within_tolerance
 from miniserve.bench.configs import (
     BLOCK_SIZE,
     CONFIGS,
@@ -33,6 +36,9 @@ from miniserve.runner import PagedRunner
 
 DTYPES = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}
 AMPLE_POOL_BLOCKS = 512
+MAX_ATTEMPTS = 3
+RETRY_SLEEP_S = 30.0
+BASELINE_CANARIES = 5
 SWEEP_POOLS = [32, 48, 96, 192]
 
 
@@ -70,6 +76,27 @@ def run_cell(model: Qwen3, spec: EngineConfig, pool_blocks: int, items: list[Wor
     return summary
 
 
+def gated_cell(
+    model: Qwen3,
+    spec: EngineConfig,
+    pool_blocks: int,
+    items: list[WorkItem],
+    baseline_ms: float,
+    emit: Callable[..., None],
+) -> dict[str, Any]:
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        before = measure_canary_ms(model)
+        summary = run_cell(model, spec, pool_blocks, items)
+        after = measure_canary_ms(model)
+        valid = within_tolerance(baseline_ms, before) and within_tolerance(baseline_ms, after)
+        gate = {"canary_before_ms": before, "canary_after_ms": after, "attempt": attempt, "valid": valid}
+        if valid:
+            return {"summary": summary, **gate}
+        emit("canary_retry", config=spec.name, pool_blocks=pool_blocks, baseline_ms=baseline_ms, **gate)
+        time.sleep(RETRY_SLEEP_S)
+    return {"summary": summary, **gate}
+
+
 def workload_stats(items: list[WorkItem]) -> dict[str, float]:
     lengths = [len(i.prompt_token_ids) for i in items]
     return {"mean_prompt_tokens": sum(lengths) / len(lengths), "max_prompt_tokens": max(lengths)}
@@ -102,7 +129,9 @@ def paging_overhead(model: Qwen3, items: list[WorkItem]) -> dict[str, float]:
 
 def environment(args: argparse.Namespace) -> dict[str, object]:
     sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
-    dirty = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, check=True).stdout.strip()
+    dirty = subprocess.run(
+        ["git", "status", "--porcelain", "--", ".", ":!bench_results"], capture_output=True, text=True, check=True
+    ).stdout.strip()
     chip = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True).stdout.strip()
     return {
         "git_sha": sha,
@@ -122,6 +151,8 @@ def environment(args: argparse.Namespace) -> dict[str, object]:
         "max_prompt_tokens": MAX_PROMPT_TOKENS,
         "prefill_chunk": PREFILL_CHUNK,
         "static_wait_s": STATIC_WAIT_S,
+        "canary_tolerance": CANARY_TOLERANCE,
+        "max_attempts": MAX_ATTEMPTS,
         "ample_pool_blocks": AMPLE_POOL_BLOCKS,
         "sweep_pools": SWEEP_POOLS,
     }
@@ -134,7 +165,7 @@ def main() -> None:
     parser.add_argument("--n", type=int, default=64)
     parser.add_argument("--reps", type=int, default=1)
     parser.add_argument("--seed", type=int, default=100)
-    parser.add_argument("--mults", type=float, nargs="+", default=[0.5, 1.0, 2.0, 4.0, 8.0])
+    parser.add_argument("--mults", type=float, nargs="+", default=[1.0, 2.0, 4.0, 8.0])
     parser.add_argument("--sweep-mult", type=float, default=8.0)
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
@@ -163,6 +194,9 @@ def main() -> None:
         emit("cold_run", config="sequential", summary=run_cell(model, CONFIGS["sequential"], AMPLE_POOL_BLOCKS, warm))
         emit("warm_run", config="sequential", summary=run_cell(model, CONFIGS["sequential"], AMPLE_POOL_BLOCKS, warm))
 
+        baseline = statistics.median([measure_canary_ms(model) for _ in range(BASELINE_CANARIES)])
+        emit("canary_baseline", baseline_ms=baseline)
+
         calibration = make_items(args.seed, None, args.n)
         capacity = run_cell(model, CONFIGS["sequential"], AMPLE_POOL_BLOCKS, calibration)
         capacity_rps = capacity["requests_per_s"]
@@ -180,7 +214,7 @@ def main() -> None:
             for mult in args.mults:
                 items = make_items(seed, mult * capacity_rps, args.n)
                 for spec in CONFIGS.values():
-                    summary = run_cell(model, spec, AMPLE_POOL_BLOCKS, items)
+                    gated = gated_cell(model, spec, AMPLE_POOL_BLOCKS, items, baseline, emit)
                     emit(
                         "matrix",
                         config=spec.name,
@@ -190,13 +224,13 @@ def main() -> None:
                         rate_per_s=mult * capacity_rps,
                         pool_blocks=AMPLE_POOL_BLOCKS,
                         workload=workload_stats(items),
-                        summary=summary,
+                        **gated,
                     )
 
             items = make_items(seed, args.sweep_mult * capacity_rps, args.n)
             for pool in SWEEP_POOLS:
                 for name in ("continuous-maxlen", "continuous-exact", "static-maxlen", "static-exact"):
-                    summary = run_cell(model, CONFIGS[name], pool, items)
+                    gated = gated_cell(model, CONFIGS[name], pool, items, baseline, emit)
                     emit(
                         "sweep",
                         config=name,
@@ -205,7 +239,7 @@ def main() -> None:
                         mult=args.sweep_mult,
                         rate_per_s=args.sweep_mult * capacity_rps,
                         pool_blocks=pool,
-                        summary=summary,
+                        **gated,
                     )
 
 

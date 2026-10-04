@@ -66,7 +66,11 @@ def sweep_section(rows: list[dict[str, Any]], key: str, title: str, digits: int 
 
 def report(rows: list[dict[str, Any]]) -> str:
     by_kind: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    invalid = 0
     for r in rows:
+        if r["kind"] in ("matrix", "sweep") and not r.get("valid", True):
+            invalid += 1
+            continue
         by_kind[r["kind"]].append(r)
     env = by_kind["environment"][0]
     out = [
@@ -84,6 +88,15 @@ def report(rows: list[dict[str, Any]]) -> str:
             f"{c['summary']['tokens_per_s']:.1f} output tokens/s, "
             f"mean prompt {c['workload']['mean_prompt_tokens']:.0f} tokens"
         )
+    if by_kind["canary_baseline"]:
+        out.append(
+            f"- Machine canary baseline: {by_kind['canary_baseline'][0]['baseline_ms']:.1f} ms per "
+            "single-sequence decode step; "
+            f"cells outside {env['canary_tolerance']:g}x before or after were rerun up to {env['max_attempts']} times"
+        )
+    out.append(
+        f"- Cells excluded as invalid after all attempts: {invalid}; reruns triggered: {len(by_kind['canary_retry'])}"
+    )
     out.append("")
     if by_kind["paging_overhead"]:
         p = by_kind["paging_overhead"][0]

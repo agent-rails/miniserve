@@ -1,0 +1,60 @@
+environment {'git_sha': '0d5c36d43d49331a00376779ab7cc244e79fda0b', 'git_dirty': True, 'chip': 'Apple M1 Max', 'python': '3.13.15', 'torch': '2.14.1', 'device': 'mps', 'dtype': 'bfloat16', 'requests_per_run': 48, 'reps': 3, 'base_seed': 100, 'rate_multipliers': [0.5, 1.0, 2.0, 4.0, 8.0], 'block_size': 16, 'max_model_len': 384, 'max_new_tokens': 96, 'max_prompt_tokens': 220, 'prefill_chunk': 256, 'static_wait_s': 0.25, 'ample_pool_blocks': 512, 'sweep_pools': [32, 48, 96, 192]}
+cold_run {'config': 'sequential'}
+warm_run {'config': 'sequential'}
+calibration {'config': 'sequential', 'capacity_requests_per_s': 0.7205572370919742, 'workload': {'mean_prompt_tokens': 68.20833333333333, 'max_prompt_tokens': 170}}
+paging_overhead {'requests': 8, 'contiguous_tokens': 625, 'contiguous_s': 13.246247249999215, 'contiguous_tokens_per_s': 47.18317484222084, 'paged_tokens': 625, 'paged_s': 13.55552283399993, 'paged_tokens_per_s': 46.106668673256664}
+matrix {'config': 'sequential', 'rep': 0, 'seed': 101, 'mult': 0.5, 'rate_per_s': 0.3602786185459871, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'static-maxlen', 'rep': 0, 'seed': 101, 'mult': 0.5, 'rate_per_s': 0.3602786185459871, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'static-exact', 'rep': 0, 'seed': 101, 'mult': 0.5, 'rate_per_s': 0.3602786185459871, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'continuous-maxlen', 'rep': 0, 'seed': 101, 'mult': 0.5, 'rate_per_s': 0.3602786185459871, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'continuous-exact', 'rep': 0, 'seed': 101, 'mult': 0.5, 'rate_per_s': 0.3602786185459871, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'sequential', 'rep': 0, 'seed': 101, 'mult': 1.0, 'rate_per_s': 0.7205572370919742, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'static-maxlen', 'rep': 0, 'seed': 101, 'mult': 1.0, 'rate_per_s': 0.7205572370919742, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'static-exact', 'rep': 0, 'seed': 101, 'mult': 1.0, 'rate_per_s': 0.7205572370919742, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'continuous-maxlen', 'rep': 0, 'seed': 101, 'mult': 1.0, 'rate_per_s': 0.7205572370919742, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'continuous-exact', 'rep': 0, 'seed': 101, 'mult': 1.0, 'rate_per_s': 0.7205572370919742, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'sequential', 'rep': 0, 'seed': 101, 'mult': 2.0, 'rate_per_s': 1.4411144741839483, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'static-maxlen', 'rep': 0, 'seed': 101, 'mult': 2.0, 'rate_per_s': 1.4411144741839483, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'static-exact', 'rep': 0, 'seed': 101, 'mult': 2.0, 'rate_per_s': 1.4411144741839483, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'continuous-maxlen', 'rep': 0, 'seed': 101, 'mult': 2.0, 'rate_per_s': 1.4411144741839483, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'continuous-exact', 'rep': 0, 'seed': 101, 'mult': 2.0, 'rate_per_s': 1.4411144741839483, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'sequential', 'rep': 0, 'seed': 101, 'mult': 4.0, 'rate_per_s': 2.8822289483678967, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'static-maxlen', 'rep': 0, 'seed': 101, 'mult': 4.0, 'rate_per_s': 2.8822289483678967, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'static-exact', 'rep': 0, 'seed': 101, 'mult': 4.0, 'rate_per_s': 2.8822289483678967, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'continuous-maxlen', 'rep': 0, 'seed': 101, 'mult': 4.0, 'rate_per_s': 2.8822289483678967, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'continuous-exact', 'rep': 0, 'seed': 101, 'mult': 4.0, 'rate_per_s': 2.8822289483678967, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'sequential', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'static-maxlen', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'static-exact', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'continuous-maxlen', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+matrix {'config': 'continuous-exact', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 56.875, 'max_prompt_tokens': 169}}
+sweep {'config': 'continuous-maxlen', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 32}
+sweep {'config': 'continuous-exact', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 32}
+sweep {'config': 'static-maxlen', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 32}
+sweep {'config': 'static-exact', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 32}
+sweep {'config': 'continuous-maxlen', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 48}
+sweep {'config': 'continuous-exact', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 48}
+sweep {'config': 'static-maxlen', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 48}
+sweep {'config': 'static-exact', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 48}
+sweep {'config': 'continuous-maxlen', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 96}
+sweep {'config': 'continuous-exact', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 96}
+sweep {'config': 'static-maxlen', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 96}
+sweep {'config': 'static-exact', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 96}
+sweep {'config': 'continuous-maxlen', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 192}
+sweep {'config': 'continuous-exact', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 192}
+sweep {'config': 'static-maxlen', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 192}
+sweep {'config': 'static-exact', 'rep': 0, 'seed': 101, 'mult': 8.0, 'rate_per_s': 5.764457896735793, 'pool_blocks': 192}
+matrix {'config': 'sequential', 'rep': 1, 'seed': 102, 'mult': 0.5, 'rate_per_s': 0.3602786185459871, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'static-maxlen', 'rep': 1, 'seed': 102, 'mult': 0.5, 'rate_per_s': 0.3602786185459871, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'static-exact', 'rep': 1, 'seed': 102, 'mult': 0.5, 'rate_per_s': 0.3602786185459871, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'continuous-maxlen', 'rep': 1, 'seed': 102, 'mult': 0.5, 'rate_per_s': 0.3602786185459871, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'continuous-exact', 'rep': 1, 'seed': 102, 'mult': 0.5, 'rate_per_s': 0.3602786185459871, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'sequential', 'rep': 1, 'seed': 102, 'mult': 1.0, 'rate_per_s': 0.7205572370919742, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'static-maxlen', 'rep': 1, 'seed': 102, 'mult': 1.0, 'rate_per_s': 0.7205572370919742, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'static-exact', 'rep': 1, 'seed': 102, 'mult': 1.0, 'rate_per_s': 0.7205572370919742, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'continuous-maxlen', 'rep': 1, 'seed': 102, 'mult': 1.0, 'rate_per_s': 0.7205572370919742, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'continuous-exact', 'rep': 1, 'seed': 102, 'mult': 1.0, 'rate_per_s': 0.7205572370919742, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'sequential', 'rep': 1, 'seed': 102, 'mult': 2.0, 'rate_per_s': 1.4411144741839483, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'static-maxlen', 'rep': 1, 'seed': 102, 'mult': 2.0, 'rate_per_s': 1.4411144741839483, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'static-exact', 'rep': 1, 'seed': 102, 'mult': 2.0, 'rate_per_s': 1.4411144741839483, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
+matrix {'config': 'continuous-maxlen', 'rep': 1, 'seed': 102, 'mult': 2.0, 'rate_per_s': 1.4411144741839483, 'pool_blocks': 512, 'workload': {'mean_prompt_tokens': 58.75, 'max_prompt_tokens': 170}}
