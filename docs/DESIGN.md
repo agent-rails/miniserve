@@ -1,6 +1,6 @@
 # miniserve design
 
-Status: proposed, revision 2 after architecture review. Nothing here is measured yet. Measured results go in `BENCHMARKS.md`.
+Status: revision 3. Phases 1 to 3 implemented and tested; Phase 4 benchmark in progress. Measured results go in `MICROBENCH.md` and `BENCHMARKS.md`. Where this document and a measurement disagree, the measurement wins.
 
 ## Problem and mechanism
 
@@ -45,7 +45,7 @@ Out of scope, by decision:
 ## Inputs, outputs, ownership
 
 - Model identity: Hugging Face repo id plus the exact snapshot revision. The loader refuses a snapshot whose `config.json` has an unsupported feature.
-- Request: `{id, prompt_token_ids, max_new_tokens, deadline_s}`. Validation rejects a request when `len(prompt) + max_new_tokens > max_model_len`, when its block reservation exceeds the whole pool, or when its id is a duplicate.
+- Request: `{id, prompt_token_ids, max_new_tokens, deadline_s}`. Validation rejects a request (terminal event `rejected`) when the prompt is empty, `max_new_tokens < 1`, `len(prompt) + max_new_tokens > max_model_len`, the block reservation exceeds the whole pool, or the queue is full. A duplicate id raises `ValueError` at submit instead of emitting an event, because an event for a reused id would look like the end of the original request.
 - Output: a stream of `(request_id, token_id, step_index)` events and exactly one terminal event: `finished`, `cancelled`, `deadline_exceeded`, `rejected`, or `error`.
 - Ownership: the block allocator is the only owner of the KV pool. Only the scheduler mutates block tables. The model runner only reads them.
 - Asserted versus observed: the caller asserts prompt tokens. The engine observes lengths, free blocks, and elapsed time.
@@ -75,9 +75,11 @@ Budgets are separate and explicit: weights (about 1.2 GB in bf16, measured at lo
 
 ## Scheduling policy
 
+- One limit, `max_running`, bounds admitted sequences and the decode batch. A separate decode cap could starve an admitted sequence.
 - Admission is strict FIFO. If the head request does not fit, later requests wait behind it. This is simple and starvation-free. Skip-ahead is rejected for v1 because it can starve large requests.
 - Each scheduler step runs one forward pass for the decode batch and, separately, one forward pass for at most one prefill chunk. Mixed prefill and decode in one pass is deferred, because it needs variable-length masking.
 - Decode batch rows with different lengths are padded to the longest row and masked.
+- Static policy: a batch forms when `max_running` requests are queued or the oldest has waited `static_wait_s`. No request is admitted until every row of the batch has finished. A finished row keeps its blocks and keeps running in the decode batch on a dummy token until the last row ends. Tokens and the terminal event are still delivered when the row finishes.
 - A deadline starts at request arrival, so it includes queue wait. Time to first token is measured separately and is not a deadline.
 - Cancellation takes effect at the next step boundary. A token produced in the step where the cancel is observed is not delivered.
 
@@ -119,19 +121,21 @@ Correctness invariants:
 
 Negative tests: over-length request, reservation larger than the pool, duplicate id, queue full, deadline during queue wait, cancel during prefill, cancel during decode, pool exhaustion keeps requests waiting in FIFO order, runner exception.
 
-Engine configurations compared (a 2x2 plus a baseline), so each effect is isolated:
+Engine configurations compared (a 2x2 plus a baseline), so each effect is isolated. All five run through the same paged attention code. The second axis is the reservation policy, not a separate cache implementation, so gather cost is identical across arms and cannot be mistaken for a memory-policy effect.
 
-| Configuration | Scheduling | KV layout |
+| Configuration | Scheduling | Reservation per sequence |
 | --- | --- | --- |
-| `sequential` | one request at a time | contiguous |
-| `static-contiguous` | fixed batches | contiguous |
-| `static-paged` | fixed batches | paged |
-| `continuous-contiguous` | iteration-level | contiguous |
-| `continuous-paged` | iteration-level | paged |
+| `sequential` | one request at a time | `exact_cap` |
+| `static-maxlen` | fixed batches | `max_model_len` slot |
+| `static-exact` | fixed batches | `exact_cap` blocks |
+| `continuous-maxlen` | iteration-level | `max_model_len` slot |
+| `continuous-exact` | iteration-level | `exact_cap` blocks |
+
+The cost of the paged layout is measured separately at batch 1: the same requests through contiguous-cache greedy decoding and through the paged `sequential` engine. Gather cost at higher batch sizes is in `MICROBENCH.md`.
 
 Static batching policy: form a batch from queued requests when the batch is full or a wait timeout expires. Finished rows stay in the batch and keep consuming padded compute until the longest row ends. Without this, static would be a strawman.
 
-Workload: open-loop Poisson arrivals. Arrival rates are set as fractions of the measured `sequential` capacity, so low load and saturation are both covered. Output lengths come from a recorded distribution with EOS enabled, so reserved and used blocks differ. Prompt and output length distributions, seeds, warmup runs, and repetition counts are recorded with every result. Cold and warm runs are reported separately. Saturation results are sanity-checked against the arrival-rate and service-rate relation.
+Workload: open-loop Poisson arrivals. A request's arrival time is its scheduled time, not the time the driver submitted it, so a long step cannot hide queue wait (coordinated omission). Arrival rates are set as multiples of the measured `sequential` capacity (0.5, 1, 2, 4, 8), so low load and saturation are both covered. Prompts use the Qwen3 chat template with thinking disabled and vary in length; answers end on EOS, so output lengths vary and reserved and used blocks differ. The pool sweep shrinks the pool to 32, 48, 96 and 192 blocks at the highest arrival rate to find where each reservation policy starts to queue. Prompt and output length distributions, seeds, warmup runs, and repetition counts are recorded with every result. Cold and warm runs are reported separately. Saturation results are sanity-checked against the arrival-rate and service-rate relation.
 
 Metrics: time to first token, inter-token latency (p50, p99), output tokens per second, queue wait, rejection rate, reserved against used blocks, process memory.
 
@@ -139,7 +143,7 @@ Claims policy: report what was measured on this machine only. No claim about vLL
 
 ## Observability and operation
 
-Structured event log per step: step index, tokens in step, running, waiting, free blocks, step wall time. The benchmark reads this log, not wall-clock estimates.
+Structured event log per working step: step index, prefill tokens, decode tokens, running, held rows (static policy), waiting, free blocks, reserved blocks, used blocks, step wall time. Idle steps, where a static batch is still forming, are not logged. The benchmark reads this log, not wall-clock estimates.
 
 ## Phases
 
@@ -147,5 +151,5 @@ Structured event log per step: step index, tokens in step, running, waiting, fre
 1.5. Microbenchmark on MPS: decode step time against batch size, and gather against contiguous attention cost. Exit: a measured note that fixes the framing of later claims.
 2. Paged cache and allocator. Exit: logits equal to phase 1 within tolerance; block invariants pass.
 3. Scheduler: continuous batching, chunked prefill, admission, cancel, deadlines. Exit: batch independence and failure tests pass.
-4. Benchmark harness and the five configurations. Exit: `BENCHMARKS.md` with sample counts and distributions.
+4. Benchmark harness and the five configurations. Exit: `BENCHMARKS.md` with sample counts and distributions, plus a check of MPS bf16 token agreement against the CPU float32 reference.
 5. Streaming HTTP endpoint. Optional: a single-file HTML explainer of block tables and batching.
