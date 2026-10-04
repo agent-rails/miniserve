@@ -58,7 +58,9 @@ def decode_step_bench(model: Qwen3, batch: int, context: int, warmup: int, reps:
     return summarize(timed(step, device, warmup, reps))
 
 
-def gather_bench(device: torch.device, dtype: torch.dtype, batch: int, context: int, block: int, warmup: int, reps: int) -> dict:
+def gather_bench(
+    device: torch.device, dtype: torch.dtype, batch: int, context: int, block: int, warmup: int, reps: int
+) -> dict:
     blocks_per_seq = context // block
     pool_blocks = batch * blocks_per_seq * 2
     pool = torch.randn(pool_blocks, block, 8, 128, device=device, dtype=dtype)
@@ -110,7 +112,14 @@ def main() -> None:
     snapshot = resolve_snapshot()
     model = Qwen3.load(snapshot, load_config(snapshot), device, dtype)
 
-    result = {"device": args.device, "dtype": args.dtype, "context": args.context, "torch": torch.__version__, "decode": {}, "gather": {}}
+    result = {
+        "device": args.device,
+        "dtype": args.dtype,
+        "context": args.context,
+        "torch": torch.__version__,
+        "decode": {},
+        "gather": {},
+    }
     for batch in [int(b) for b in args.batches.split(",")]:
         result["decode"][batch] = decode_step_bench(model, batch, args.context, args.warmup, args.reps)
         result["gather"][batch] = gather_bench(device, dtype, batch, args.context, 16, args.warmup, args.reps)

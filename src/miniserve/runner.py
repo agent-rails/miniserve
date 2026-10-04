@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 import torch
 
@@ -26,9 +26,7 @@ class PagedRunner:
         index = torch.tensor([count - 1], dtype=torch.long, device=device)
         return self.model.forward(ids, positions, self.paged, mask, index)[0]
 
-    def decode(
-        self, seq_ids: Sequence[str], tokens: Sequence[int], pasts: Sequence[int]
-    ) -> torch.Tensor:
+    def decode(self, seq_ids: Sequence[str], tokens: Sequence[int], pasts: Sequence[int]) -> torch.Tensor:
         if not (len(seq_ids) == len(tokens) == len(pasts)) or not seq_ids:
             raise ValueError("seq_ids, tokens and pasts must be equal length and non-empty")
         device = self.model.device

@@ -4,9 +4,7 @@ from miniserve.config import ModelConfig
 
 
 class ContiguousKV:
-    def __init__(
-        self, config: ModelConfig, batch: int, max_len: int, dtype: torch.dtype, device: torch.device
-    ):
+    def __init__(self, config: ModelConfig, batch: int, max_len: int, dtype: torch.dtype, device: torch.device):
         shape = (config.num_layers, batch, config.num_kv_heads, max_len, config.head_dim)
         self.k = torch.zeros(shape, dtype=dtype, device=device)
         self.v = torch.zeros(shape, dtype=dtype, device=device)

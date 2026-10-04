@@ -3,15 +3,13 @@ from typing import Protocol
 
 import torch
 import torch.nn.functional as F
-from safetensors import safe_open
+from safetensors.torch import load_file
 
 from miniserve.config import ModelConfig
 
 
 class KVCache(Protocol):
-    def update(
-        self, layer: int, k: torch.Tensor, v: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]: ...
+    def update(self, layer: int, k: torch.Tensor, v: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]: ...
 
 
 def rms_norm(x: torch.Tensor, weight: torch.Tensor, eps: float) -> torch.Tensor:
@@ -56,13 +54,10 @@ class Qwen3:
         self.rope = Rope(config.head_dim, config.rope_theta, device)
 
     @classmethod
-    def load(
-        cls, snapshot: Path, config: ModelConfig, device: torch.device, dtype: torch.dtype
-    ) -> "Qwen3":
+    def load(cls, snapshot: Path, config: ModelConfig, device: torch.device, dtype: torch.dtype) -> "Qwen3":
         weights: dict[str, torch.Tensor] = {}
-        with safe_open(str(snapshot / "model.safetensors"), framework="pt", device="cpu") as f:
-            for name in f.keys():
-                weights[name] = f.get_tensor(name).to(device=device, dtype=dtype)
+        for name, tensor in load_file(str(snapshot / "model.safetensors"), device="cpu").items():
+            weights[name] = tensor.to(device=device, dtype=dtype)
         expected = 3 + config.num_layers * 11
         if len(weights) != expected:
             raise ValueError(f"unexpected tensor count {len(weights)}, expected {expected}")

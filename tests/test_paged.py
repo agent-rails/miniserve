@@ -89,23 +89,21 @@ def test_batched_decode_matches_individual(stack, cpu_model, tokenizer, config):
     expected = [greedy_generate(cpu_model, p, NEW_TOKENS) for p in prompts]
     seqs = [f"s{i}" for i in range(len(prompts))]
     state = {}
-    for seq, p in zip(seqs, prompts):
+    for seq, p in zip(seqs, prompts, strict=True):
         alloc.allocate(seq, blocks_needed(len(p), NEW_TOKENS))
         logits = runner.prefill(seq, p, 0)
         state[seq] = {"out": [int(logits.argmax())], "past": len(p)}
     done = {s for s in seqs if state[s]["out"][-1] in eos or len(state[s]["out"]) == NEW_TOKENS}
     while len(done) < len(seqs):
         active = [s for s in seqs if s not in done]
-        logits = runner.decode(
-            active, [state[s]["out"][-1] for s in active], [state[s]["past"] for s in active]
-        )
-        for seq, row in zip(active, logits):
+        logits = runner.decode(active, [state[s]["out"][-1] for s in active], [state[s]["past"] for s in active])
+        for seq, row in zip(active, logits, strict=True):
             state[seq]["past"] += 1
             state[seq]["out"].append(int(row.argmax()))
             if state[seq]["out"][-1] in eos or len(state[seq]["out"]) == NEW_TOKENS:
                 done.add(seq)
         alloc.check()
-    for seq, exp in zip(seqs, expected):
+    for seq, exp in zip(seqs, expected, strict=True):
         assert state[seq]["out"] == exp
 
 

@@ -1,4 +1,4 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 import torch
 
@@ -33,8 +33,8 @@ class PagedKV:
         if new < 1:
             raise ValueError("new must be >= 1")
         bs = self.block_size
-        needs = []
-        for table, past in zip(tables, pasts):
+        needs: list[int] = []
+        for table, past in zip(tables, pasts, strict=True):
             need = -(-(past + new) // bs)
             if len(table) < need:
                 raise ValueError(f"table has {len(table)} blocks, needs {need}")
@@ -42,7 +42,7 @@ class PagedKV:
         blocks_per_row = max(needs)
         gather: list[int] = []
         slots: list[int] = []
-        for table, past, need in zip(tables, pasts, needs):
+        for table, past, need in zip(tables, pasts, needs, strict=True):
             padded = list(table[:need]) + [table[0]] * (blocks_per_row - need)
             gather.extend(padded)
             for pos in range(past, past + new):

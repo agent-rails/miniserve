@@ -1,6 +1,7 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 MODEL_REPO = "models--Qwen--Qwen3-0.6B"
 MODEL_REVISION = "c1899de289a04d12100db370d81485cdf75e47ca"
@@ -34,7 +35,7 @@ def resolve_snapshot(hub_dir: Path | None = None) -> Path:
 
 
 def load_config(snapshot: Path) -> ModelConfig:
-    raw = json.loads((snapshot / "config.json").read_text())
+    raw: dict[str, Any] = json.loads((snapshot / "config.json").read_text())
     if raw["model_type"] != "qwen3":
         raise ValueError(f"unsupported model_type {raw['model_type']!r}")
     if raw.get("rope_scaling") is not None:
@@ -47,8 +48,8 @@ def load_config(snapshot: Path) -> ModelConfig:
         raise ValueError(f"unsupported hidden_act {raw['hidden_act']!r}")
     if not raw["tie_word_embeddings"]:
         raise ValueError("untied embeddings unsupported")
-    generation = json.loads((snapshot / "generation_config.json").read_text())
-    eos = generation["eos_token_id"]
+    generation: dict[str, Any] = json.loads((snapshot / "generation_config.json").read_text())
+    eos: int | list[int] = generation["eos_token_id"]
     eos_ids = tuple(eos) if isinstance(eos, list) else (eos,)
     return ModelConfig(
         vocab_size=raw["vocab_size"],
