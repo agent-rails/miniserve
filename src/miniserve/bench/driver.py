@@ -6,6 +6,8 @@ from miniserve.bench.metrics import RunResult
 from miniserve.bench.workload import WorkItem
 from miniserve.engine import Engine, Request, TokenEvent
 
+IDLE_POLL_S = 0.001
+
 
 def run_workload(
     engine: Engine,
@@ -30,6 +32,8 @@ def run_workload(
             sleep(max(0.0, pending[index].arrival_s - (clock() - started)))
             continue
         events = engine.step()
+        if not events and engine.running_count == 0:
+            sleep(IDLE_POLL_S)
         now = clock()
         for event in events:
             if isinstance(event, TokenEvent):

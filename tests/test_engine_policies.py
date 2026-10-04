@@ -114,3 +114,15 @@ def test_static_runner_failure_with_held_rows_has_single_terminal_per_request(ma
 def test_negative_static_wait_rejected(make_engine):
     with pytest.raises(ValueError):
         make_engine(static_wait_s=-1.0)
+
+
+def test_idle_static_wait_steps_are_not_logged(make_engine):
+    clock = FakeClock()
+    engine = make_engine(policy="static", max_running=3, static_wait_s=5.0, clock=clock)
+    engine.submit(synthetic("a", 4, 4))
+    for _ in range(3):
+        engine.step()
+    assert engine.step_log == []
+    clock.now = 6.0
+    engine.step()
+    assert len(engine.step_log) == 1 and engine.step_log[0].running == 1

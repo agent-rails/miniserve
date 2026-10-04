@@ -182,8 +182,10 @@ class Engine:
             self._fail_running(f"{type(err).__name__}: {err}")
             self._step += 1
             raise
+        idle = not self._running and prefill_tokens == 0 and decode_tokens == 0 and not decoding
         self._release_held_batch()
-        self._log_step(started, prefill_tokens, decode_tokens)
+        if not idle:
+            self._log_step(started, prefill_tokens, decode_tokens)
         self._step += 1
         if self.check_invariants:
             self._check()

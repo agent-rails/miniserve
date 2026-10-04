@@ -1,5 +1,6 @@
 import statistics
 from dataclasses import dataclass
+from typing import Any
 
 from miniserve.engine import RequestRecord, StepRecord
 
@@ -35,7 +36,7 @@ def intertoken_ms(times: list[float]) -> list[float]:
     return [(b - a) * 1000 for a, b in zip(times, times[1:], strict=False)]
 
 
-def summarize(result: RunResult) -> dict[str, object]:
+def summarize(result: RunResult) -> dict[str, Any]:
     records = result.records
     finished = {rid: r for rid, r in records.items() if r.reason == "finished"}
     ttft = [(r.first_token - r.arrival) * 1000 for r in finished.values() if r.first_token is not None]
