@@ -1,6 +1,6 @@
 # miniserve
 
-A small LLM server, built from scratch, to show how two key ideas in modern LLM serving work: **continuous batching** and a **paged KV cache**.
+A small LLM serving engine, built from scratch, to show how two key ideas in modern LLM serving work: **continuous batching** and a **paged KV cache**.
 
 It runs a real model (Qwen3-0.6B) on a Mac or a CPU. It is small enough to read in an afternoon.
 

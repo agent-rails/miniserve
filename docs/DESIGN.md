@@ -4,7 +4,7 @@ Status: revision 4. Phases 1 to 4 implemented and tested. The benchmark has one 
 
 ## Problem and mechanism
 
-An LLM server turns a prompt into tokens in two phases.
+A serving engine turns a prompt into tokens in two phases.
 
 - Prefill: process all prompt tokens at once. Writes keys and values (the KV cache) for every prompt token.
 - Decode: produce one token per step. Reads the whole KV cache of the sequence on every step.
@@ -135,9 +135,9 @@ The cost of the paged layout is measured separately at batch 1: the same request
 
 Static batching policy: form a batch from queued requests when the batch is full or a wait timeout expires. Finished rows stay in the batch and keep consuming padded compute until the longest row ends. Without this, static would be a strawman.
 
-Workload: open-loop Poisson arrivals. A request's arrival time is its scheduled time, not the time the driver submitted it, so a long step cannot hide queue wait (coordinated omission). Arrival rates are set as multiples of the measured `sequential` capacity (0.5, 1, 2, 4, 8), so low load and saturation are both covered. Prompts use the Qwen3 chat template with thinking disabled and vary in length; answers end on EOS, so output lengths vary and reserved and used blocks differ. The pool sweep shrinks the pool to 32, 48, 96 and 192 blocks at the highest arrival rate to find where each reservation policy starts to queue. Prompt and output length distributions, seeds, warmup runs, and repetition counts are recorded with every result. Cold and warm runs are reported separately. Saturation results are sanity-checked against the arrival-rate and service-rate relation.
+Workload: open-loop Poisson arrivals. A request's arrival time is its scheduled time, not the time the driver submitted it, so a long step cannot hide queue wait (coordinated omission). Arrival rates are set as multiples of the measured `sequential` capacity. The final run used 1, 2, 4 and 8. The 0.5 rate was dropped after the first attempt because it is arrival-bound and adds little beyond cost. Prompts use the Qwen3 chat template with thinking disabled and vary in length; answers end on EOS, so output lengths vary and reserved and used blocks differ. The pool sweep shrinks the pool to 32, 48, 96 and 192 blocks at the highest arrival rate to find where each reservation policy starts to queue. Prompt and output length distributions, seeds, warmup runs, and repetition counts are recorded with every result. Cold and warm runs are recorded as separate rows in the raw results, but are not analyzed in `BENCHMARKS.md`. Saturation results are sanity-checked against the arrival-rate and service-rate relation.
 
-Metrics: time to first token, inter-token latency (p50, p99), output tokens per second, queue wait, rejection rate, reserved against used blocks, process memory.
+Metrics: time to first token, inter-token latency (p50, p99), output tokens per second, queue wait, rejection rate, reserved against used blocks. Process memory was planned and not measured.
 
 Claims policy: report what was measured on this machine only. No claim about vLLM or any server not run on the same machine and workload. MPS results are labeled MPS. Decode is not described as bandwidth-bound unless Phase 1.5 shows it.
 
