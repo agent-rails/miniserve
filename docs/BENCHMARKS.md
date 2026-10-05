@@ -4,7 +4,7 @@ What was measured: five ways of running the same small model on one Mac, under t
 
 Hardware and software: Apple M1 Max (32 GB), MPS, bfloat16, torch 2.14.1, Qwen3-0.6B. Sequential capacity on this machine is 0.703 requests per second (45.6 output tokens per second). Arrival rates below are multiples of that figure.
 
-**Sample size: one complete repetition.** Three were planned. Repetition 0 finished with all 36 cells valid. The run was stopped during repetition 1, which has 2 valid cells. Almost every number below is a single run. Treat differences under about 10% as noise. The large effects reported here are far larger than that.
+**Sample size: one complete repetition.** Three were planned. Repetition 0 finished with all 36 cells valid. The run was stopped during repetition 1, which has 2 valid cells. The host went to sleep at 23:39:55 while repetition 1 was running, and I stopped the run after it woke instead of resuming it. Almost every number below is a single run. Treat differences under about 10% as noise. The large effects reported here are far larger than that.
 
 ## What we found
 
@@ -42,12 +42,13 @@ Hardware and software: Apple M1 Max (32 GB), MPS, bfloat16, torch 2.14.1, Qwen3-
 
 ## Validity and limits
 
-- **A first attempt was discarded.** Its later cells ran up to four times slower than the same cells earlier (single-sequence step time rose from 21 ms to 82 ms), while swap was heavily used and other apps were open. Those results are kept as `bench_results/attempt1_contaminated.jsonl` and are not used.
+- **A first attempt was discarded.** Its later cells ran up to four times slower than the same cells earlier (single-sequence step time rose from 21 ms to 82 ms). The host's power log shows that attempt ran across repeated sleeps, a low-power sleep, and a wake from hibernate at 18:33, with maintenance wakes every 15 minutes afterwards. Sleep and wake cycles, not other apps, are the most likely cause, but I did not isolate it. The results are kept as `bench_results/attempt1_contaminated.jsonl` and are not used.
 - **Machine check.** Before and after every cell, the run measured a fixed single-sequence decode step (the canary, baseline 18.5 ms). A cell was rerun if either reading exceeded 1.15 times the baseline, up to 6 attempts.
 - **The check was too strict.** Readings taken just after a cell are about 14% higher than before it, which sits on the limit. This caused 40 reruns and 2 cells (static, 1 times, repetition 1) to be excluded after 6 attempts, with readings 27% to 31% above baseline. The largest accepted after-reading was 21.290 ms against a 21.292 ms limit.
 - **What the check covers.** It measures one single-sequence decode step before and after a cell. It cannot see interference in the middle of a cell or at larger batch sizes. After 40 reruns, kept cells may be the more favorable repeats.
 - **Fixed cell order.** Every repetition ran configurations in the same order, so slow drift in the machine is confounded with configuration.
 - **Timing.** Step times use a monotonic clock read after each step, with no explicit MPS synchronize call. The read-back of chosen tokens to the CPU synchronizes implicitly.
+- **Power management.** The host sleeps after one minute of idle time and the runs did not hold it awake. The power log shows it fully awake from 21:48 to 23:39:55 on the day of the final run, so repetition 0 ran awake. Later runs should hold the machine awake (for example with `caffeinate -ims`).
 - **Not isolated.** Chrome, Telegram and a VPN client stayed open, and macOS background services ran. OrbStack and Cursor were closed shortly after the run started.
 - **Numerics.** On the benchmark's own prompts, bfloat16 on MPS matched the CPU float32 reference exactly for 7 of 16 sequences over 48 tokens. The other 9 diverged, first at tokens 12 to 45 (`bench_results/bf16_agreement.json`). Outputs, and so answer lengths, differ slightly between configurations because batch composition changes rounding. At 8 times capacity total output tokens ranged from 3,316 to 3,358 across configurations (about 1.3%).
 - **Percentiles.** 48 requests per cell means the p99 is close to the maximum.
