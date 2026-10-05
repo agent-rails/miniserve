@@ -113,6 +113,19 @@ def test_bind_rejects_short_table(config, cpu_model):
         paged.bind([[0]], [0], 9)
 
 
+def test_bind_rejects_negative_past(config, cpu_model):
+    paged = PagedKV(config, 8, BLOCK_SIZE, cpu_model.dtype, cpu_model.device)
+    with pytest.raises(ValueError):
+        paged.bind([[0]], [-1], 1)
+
+
+@pytest.mark.parametrize("block", [-1, 8])
+def test_bind_rejects_out_of_range_block(config, cpu_model, block):
+    paged = PagedKV(config, 8, BLOCK_SIZE, cpu_model.dtype, cpu_model.device)
+    with pytest.raises(ValueError):
+        paged.bind([[block]], [0], 1)
+
+
 def test_update_before_bind_fails(config, cpu_model):
     paged = PagedKV(config, 8, BLOCK_SIZE, cpu_model.dtype, cpu_model.device)
     k = torch.zeros(1, config.num_kv_heads, 1, config.head_dim)

@@ -148,6 +148,34 @@ def test_invalid_requests_are_rejected(make_engine, request_obj, detail):
     assert not engine.has_work
 
 
+def test_invalid_prompt_tokens_do_not_fail_decoding_request(make_engine):
+    healthy = synthetic("healthy", 6, 12)
+    alone = make_engine()
+    alone.submit(healthy)
+    expected = tokens_of(run_all(alone), "healthy")
+
+    engine = make_engine()
+    engine.submit(healthy)
+    events = engine.step()
+    assert tokens_of(events, "healthy")
+    engine.submit(Request("negative", (-1,), 4))
+    engine.submit(Request("too_large", (engine.runner.model.config.vocab_size,), 4))
+    events.extend(engine.drain())
+    events.extend(run_all(engine))
+    assert terminal_of(events, "negative").reason == "rejected"
+    assert terminal_of(events, "too_large").reason == "rejected"
+    assert terminal_of(events, "healthy").reason == "finished"
+    assert tokens_of(events, "healthy") == expected
+
+
+@pytest.mark.parametrize("deadline_s", [float("nan"), float("inf"), -1.0])
+def test_invalid_deadline_is_rejected(make_engine, deadline_s):
+    engine = make_engine()
+    engine.submit(synthetic("x", 4, 4, deadline_s=deadline_s))
+    assert terminal_of(engine.drain(), "x").reason == "rejected"
+    assert not engine.has_work
+
+
 def test_queue_full_rejects(make_engine):
     engine = make_engine(queue_capacity=1)
     engine.submit(synthetic("a", 4, 4))

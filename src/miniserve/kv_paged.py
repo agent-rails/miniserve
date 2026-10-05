@@ -35,6 +35,10 @@ class PagedKV:
         bs = self.block_size
         needs: list[int] = []
         for table, past in zip(tables, pasts, strict=True):
+            if past < 0:
+                raise ValueError("past must be >= 0")
+            if any(block < 0 or block >= self.num_blocks for block in table):
+                raise ValueError("block id outside cache pool")
             need = -(-(past + new) // bs)
             if len(table) < need:
                 raise ValueError(f"table has {len(table)} blocks, needs {need}")

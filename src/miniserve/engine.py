@@ -1,3 +1,4 @@
+import math
 import time
 from collections import deque
 from collections.abc import Callable
@@ -194,8 +195,12 @@ class Engine:
     def _validation_error(self, request: Request) -> str | None:
         if not request.prompt_token_ids:
             return "empty prompt"
+        if any(token < 0 or token >= self.runner.model.config.vocab_size for token in request.prompt_token_ids):
+            return "prompt token id outside model vocabulary"
         if request.max_new_tokens < 1:
             return "max_new_tokens must be >= 1"
+        if request.deadline_s is not None and (not math.isfinite(request.deadline_s) or request.deadline_s < 0):
+            return "deadline_s must be finite and >= 0"
         if len(request.prompt_token_ids) + request.max_new_tokens > self.max_model_len:
             return "prompt plus max_new_tokens exceeds max_model_len"
         if self.blocks_needed(request) > self.runner.allocator.num_blocks:
