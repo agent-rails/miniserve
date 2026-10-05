@@ -112,3 +112,7 @@ The full benchmark takes a couple of hours. Do not run other GPU work at the sam
 - **KV cache**: the model's memory of what it has read so far.
 - **TTFT**: time to first token. How long a user waits to see anything.
 - **Inter-token latency**: the gap between tokens while an answer streams.
+
+## License
+
+Apache-2.0. See [`LICENSE`](LICENSE).
